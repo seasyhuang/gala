@@ -148,14 +148,8 @@ def print_report(
         print(f"  - {hit}")
 
 
-def notify_discord(webhook: str, hit: str) -> None:
-    payload = {
-        "content": (
-            "**Possible KCC Gala call detected**\n"
-            f"{hit}\n"
-            f"{LIST_URL}"
-        )
-    }
+def notify_discord(webhook: str, content: str) -> None:
+    payload = {"content": content}
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         webhook,
@@ -173,6 +167,24 @@ def append_notified(path: Path, hits: list[str]) -> None:
             f.write(hit + "\n")
 
 
+def run_heartbeat(dry_run: bool, webhook: str) -> int:
+    message = (
+        "Still watching KCC Notices for a Gala call "
+        f"(daily checks continue).\n{LIST_URL}"
+    )
+    print(message)
+    if dry_run:
+        print("Dry-run / no webhook: skipped Discord heartbeat.")
+        return 0
+    try:
+        notify_discord(webhook, message)
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        print(f"Discord heartbeat failed: {exc}", file=sys.stderr)
+        return 1
+    print("Sent weekly heartbeat.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -180,10 +192,18 @@ def main() -> int:
         action="store_true",
         help="Print matches only; never Discord or write notified.txt",
     )
+    parser.add_argument(
+        "--heartbeat",
+        action="store_true",
+        help="Send a weekly 'still watching' Discord ping (no Notices scrape)",
+    )
     args = parser.parse_args()
 
     webhook = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
     dry_run = args.dry_run or not webhook
+
+    if args.heartbeat:
+        return run_heartbeat(dry_run=dry_run, webhook=webhook)
 
     try:
         html = fetch_html(LIST_URL)
@@ -205,7 +225,10 @@ def main() -> int:
 
     for hit in new:
         try:
-            notify_discord(webhook, hit)
+            notify_discord(
+                webhook,
+                f"**Possible KCC Gala call detected**\n{hit}\n{LIST_URL}",
+            )
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             print(f"Discord failed for hit: {exc}", file=sys.stderr)
             return 1

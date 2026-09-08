@@ -27,7 +27,9 @@ If `DISCORD_WEBHOOK_URL` is unset, live mode also stays print-only.
    - Value: your webhook URL
 3. Actions → **Watch KCC Gala call** → Run workflow
 
-The workflow runs daily at 14:00 UTC (~10:00 ET in daylight time). When it notifies, it appends matches to `notified.txt` and commits so each distinct match only alerts once.
+The watch workflow runs daily at 14:00 UTC (~10:00 ET in daylight time). When it notifies, it appends matches to `notified.txt` and commits so each distinct match only alerts once.
+
+A separate workflow sends a quiet **“still watching”** Discord ping on **Sundays** at 15:00 UTC (~11:00 ET). Run it manually via Actions → **Weekly still-watching ping**.
 
 ## Matching
 
